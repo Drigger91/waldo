@@ -1,0 +1,28 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+/bin/
+/dist/
+
+# Test & coverage output
+*.test
+*.out
+coverage.*
+
+# Go workspace / vendoring
+go.work
+go.work.sum
+/vendor/
+
+# Editor / OS cruft
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# waldo runtime data (WAL segments, SSTables — Phase 2+)
+*.wal
+*.sst
+/data/
