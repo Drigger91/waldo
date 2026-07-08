@@ -51,8 +51,6 @@ It does not need to make practical sense. It needs to make me a better engineer.
 - Every phase gets **benchmarks** (`go test -bench`) and runs clean under
   `go test -race`.
 
-Module path: `github.com/Drigger91/waldo` (adjust if you fork/rename).
-
 ---
 
 ## Roadmap
