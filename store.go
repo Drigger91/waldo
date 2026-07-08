@@ -7,7 +7,7 @@ import (
 )
 
 // entry is what the store keeps per key. Currently just the value; a cached
-// byte cost will return here when the byte budget comes back.
+// byte cost will return here when the byte budget is introduced
 type entry[V any] struct {
 	value V
 }
@@ -47,20 +47,32 @@ func (s *store[K, V]) Get(key K) (V, bool) {
 }
 
 // Set inserts or updates key, then evicts until back within the entry-count budget.
-//
-// TODO(you):
-//  1. Lock. If key already exists: overwrite items[key] and s.policy.Touch(key).
-//     If it's new: write items[key] and s.policy.Add(key).
-//  2. Call s.evictToFit() (below) to bring the store back within budget.
 func (s *store[K, V]) Set(key K, value V) {
-	panic("TODO: implement Set")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.items[key]; exists {
+		// add to the storage
+		s.policy.Touch(key)
+		s.items[key] = entry[V]{value}
+		return
+	}
+	// new key: add first, then trim back to budget (add-then-evict keeps the
+	// store at exactly maxItems, instead of floating at maxItems+1).
+	s.items[key] = entry[V]{value}
+	s.policy.Add(key)
+	s.evict()
 }
 
 // Delete removes key if present.
-//
-// TODO(you): Lock. If items[key] exists, delete it and s.policy.Remove(key).
 func (s *store[K, V]) Delete(key K) {
-	panic("TODO: implement Delete")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.items[key]; exists {
+		delete(s.items, key)
+		s.policy.Remove(key)
+	}
 }
 
 // Len returns the number of entries.
@@ -70,19 +82,23 @@ func (s *store[K, V]) Len() int {
 	return len(s.items)
 }
 
-// evictToFit evicts victims until the entry-count budget is satisfied. Caller
-// MUST hold s.mu (write lock).
+// evict removes victims until the entry-count budget is satisfied.
 //
-// TODO(you): loop while over budget:
-//
-//	for s.overCapacity() {
-//	    victim, ok := s.policy.Evict()
-//	    if !ok { break } // policy empty — can't evict further
-//	    delete(s.items, victim)
-//	    if s.onEvict != nil { s.onEvict(victim) }
-//	}
-func (s *store[K, V]) evictToFit() {
-	panic("TODO: implement evictToFit")
+// Caller MUST hold s.mu (write lock). It does NOT lock itself: Set already holds
+// the lock, and Go's RWMutex is not reentrant — re-locking here would deadlock
+// the goroutine against itself. This is why locking lives in the public methods
+// and helpers assume it.
+func (s *store[K, V]) evict() {
+	for s.overCapacity() {
+		victim, ok := s.policy.Evict()
+		if !ok {
+			return // policy empty — nothing left to evict
+		}
+		delete(s.items, victim)
+		if s.onEvict != nil {
+			s.onEvict(victim)
+		}
+	}
 }
 
 // overCapacity reports whether the entry-count budget is exceeded.

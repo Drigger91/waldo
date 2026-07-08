@@ -44,7 +44,9 @@ func (p *LRU[K]) Len() int {
 // Hint: container/list has exactly the method you want for "move this element
 // to the front" — no need to remove + re-add.
 func (p *LRU[K]) Touch(key K) {
-	panic("TODO: implement LRU.Touch")
+	if el, ok := p.nodes[key]; ok {
+		p.ll.MoveToFront(el)
+	}
 }
 
 // Remove drops a key from the policy (explicit delete).
@@ -53,7 +55,10 @@ func (p *LRU[K]) Touch(key K) {
 // Keep the two structures in lockstep — a node in the list but not the map (or
 // vice-versa) is the classic LRU bug the race detector won't catch for you.
 func (p *LRU[K]) Remove(key K) {
-	panic("TODO: implement LRU.Remove")
+	if el, ok := p.nodes[key]; ok {
+		p.ll.Remove(el)
+		delete(p.nodes, key)
+	}
 }
 
 // Evict removes and returns the least-recently-used key (the back of the list).
@@ -62,5 +67,13 @@ func (p *LRU[K]) Remove(key K) {
 // Otherwise recover the key with a type assertion on el.Value, remove it from
 // BOTH p.ll and p.nodes, and return (key, true).
 func (p *LRU[K]) Evict() (K, bool) {
-	panic("TODO: implement LRU.Evict")
+	back := p.ll.Back()
+	if back == nil {
+		var zero K
+		return zero, false
+	}
+	key := back.Value.(K)
+	p.ll.Remove(back)
+	delete(p.nodes, key)
+	return key, true
 }
