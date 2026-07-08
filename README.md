@@ -125,7 +125,7 @@ Explicitly season 2.
 waldo/
 ├── go.mod
 ├── README.md
-├── whiteboard/         # design discussions & decision records
+├── whiteboard/         # project journal: decisions, discussions, gotchas
 ├── waldo.go            # public API: Store interface, New(), options
 ├── store.go            # core concurrent map implementation
 ├── eviction/
@@ -139,38 +139,3 @@ waldo/
 │   └── recovery.go
 └── *_test.go           # tests + benchmarks alongside each package
 ```
-
-Nothing here is implemented yet — this is the map, not the territory.
-
-## Working agreement
-
-- **I write code too.** Don't scaffold entire implementations end-to-end;
-  explain the design, hand me the tricky primitive or a skeleton, let me fill in
-  the rest, then review.
-- Prefer teaching the *why* (especially concurrency trade-offs) over just the *what*.
-
-## Ground rules / habits
-
-- `go test -race ./...` on every change.
-- Benchmark before/after concurrency changes; keep the numbers.
-- Write the **crash test early** in Phase 2: kill the process mid-write, restart,
-  assert no data loss / no corruption. That one test forces real understanding of
-  durability.
-
----
-
-## Resume here
-
-**Phase 1 design is settled** — see [`whiteboard/001`](whiteboard/001-phase1-core-store.md)
-for the full reasoning (eviction split, dual count+byte budget, the "`Get` is not a
-read" concurrency crux, and the global-lock → shard → timestamp+sampling arc).
-
-**Next step:** hand over `Store[K,V]` + `Policy[K]` interface skeletons + the
-`Options` struct, then fill in the **first-cut** implementation:
-
-- single `sync.RWMutex`, full `Lock` in `Get` (dumb-but-correct baseline)
-- exact LRU via `container/list` + `map[K]*list.Element`
-- v0 API: `Get`, `Set`, `Delete`, `Len` (`Scan` deferred)
-
-Get `go test -race` green, benchmark it — that number is the baseline before
-sharding.
