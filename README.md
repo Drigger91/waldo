@@ -124,6 +124,7 @@ waldo/
 ├── go.mod
 ├── README.md
 ├── whiteboard/         # project journal: decisions, discussions, gotchas
+├── plans/              # living per-milestone execution plans + status
 ├── waldo.go            # public API: Store interface, New(), options
 ├── store.go            # core concurrent map implementation
 ├── eviction/
