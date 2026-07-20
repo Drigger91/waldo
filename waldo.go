@@ -2,7 +2,7 @@
 //
 // It is a library you import, not a server you connect to. The in-memory heart
 // is a thread-safe store keeping per-key version history; transactions with
-// snapshot isolation and a write-ahead log follow (see plans/).
+// snapshot isolation and a write-ahead log follow (see docs/plans/).
 //
 // Eviction is an opt-in policy, not the point: MaxEntries defaults to unlimited,
 // and bounded eviction is incompatible with snapshot isolation — a snapshot

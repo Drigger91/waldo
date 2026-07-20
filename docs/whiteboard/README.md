@@ -9,12 +9,14 @@ made, problems encountered, and models that clicked. Newest first below.
 
 ## Entries
 
-- **[2026-07-20](2026-07-20.md)** — versioning defaults closed (5, no cap); `seq` is
-  the shared primitive across versioning/WAL/MVCC/LSM; **SSTables deferred** (03 is
-  WAL **+ snapshot**, since `MaxEntries` bounds memory by construction);
-  inline-vs-background rule; product re-factored into **core engine + separate
-  utility project**, making `OnEvict` load-bearing and possibly pulling the network
-  face earlier.
+- **[2026-07-20](2026-07-20.md)** — **waldo is a database, not a cache** (eviction and
+  snapshot isolation are incompatible); **MVCC moved ahead of the WAL**, since
+  atomicity needs a transaction boundary to mean anything; SSTables deferred; global
+  `seq`, never per-shard; inline-vs-background rule. Then 02 landed green, and the
+  six bugs it took: **Go value semantics** (map values, slice headers, and reslicing
+  all share or copy in ways that surprise), `History` silently breaking `Get` through
+  a shared backing array, and the 07-09 **deadlock recurring** — a convention that
+  lives only in a doc comment is not a safeguard.
 - **[2026-07-14](2026-07-14.md)** — direction crystallised (core-first, then thin AI
   faces); versioning (02) design decided — unified `Store` + `MaxVersions`,
   `History` returning `[]Version[V]`, `Delete` drops the chain.

@@ -1,6 +1,8 @@
 # 02 — Versioning (keep-last-N per key)
 
-**Status:** 🟡 in progress — design settled ([whiteboard/2026-07-14](../whiteboard/2026-07-14.md)); skeletons next
+**Status:** 🟢 code green under `-race`; bench outstanding.
+Design: [2026-07-14](../whiteboard/2026-07-14.md) · implementation & the six bugs:
+[2026-07-20](../whiteboard/2026-07-20.md)
 **Goal:** keep the last N versions of each key — the incremental on-ramp to full
 MVCC (04), and the feature behind prompt-versioning in the AI use case.
 
@@ -24,12 +26,13 @@ type entry[V any]   struct { versions []Version[V] } // oldest-first, len ≤ Ma
 
 ## Tasks
 
-- [ ] `Version[V]` type + `Options.MaxVersions` + `History` on the `Store` interface (waldo.go)
-- [ ] `entry.versions` chain + `latest()` helper; update `Get` to read the latest
-- [ ] `pushVersion` — append + trim to `MaxVersions` (the meaty bit)
-- [ ] wire `Set` to `pushVersion` + policy/eviction
-- [ ] `History` — newest-first copy
-- [ ] `TestStore_Versioning` green + `-race`; small bench (append cost / mem per version)
+- [x] `Version[V]` type + `Options.MaxVersions` + `History` on the `Store` interface (waldo.go)
+- [x] `entry.versions` chain + `latest()` helper; update `Get` to read the latest
+- [x] `pushVersionLocked` — append + trim to `MaxVersions` (the meaty bit)
+- [x] wire `Set` to `pushVersionLocked` + policy/eviction
+- [x] `History` — newest-first copy
+- [x] `TestStore_Versioning` green + `-race`
+- [ ] small bench (append cost / mem per version) ← **only thing left**
 
 ## Exit criteria
 

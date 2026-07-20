@@ -10,7 +10,7 @@ The name is a nod to the **WAL** (Write-Ahead Log) that gives it durability —
 > **Status:** learning project, pre-implementation. Correctness and understanding
 > over practicality. If a feature exists mainly to teach a concept, that's the point.
 
-> **Design decisions live in [`whiteboard/`](whiteboard/)** — the reasoning behind
+> **Design decisions live in [`docs/whiteboard/`](docs/whiteboard/)** — the reasoning behind
 > every non-obvious choice, recorded as we go. This README is the map; the whiteboard
 > is how we drew it.
 
@@ -123,8 +123,9 @@ Explicitly season 2.
 waldo/
 ├── go.mod
 ├── README.md
-├── whiteboard/         # project journal: decisions, discussions, gotchas
-├── plans/              # living per-milestone execution plans + status
+├── docs/
+│   ├── whiteboard/     # project journal: decisions, discussions, gotchas
+│   └── plans/          # living per-milestone execution plans + status
 ├── waldo.go            # public API: Store interface, New(), options
 ├── store.go            # core concurrent map implementation
 ├── eviction/

@@ -34,6 +34,6 @@ green under `-race`.
 
 ## Notes
 
-Design reasoning & gotchas: `whiteboard/2026-07-09.md` — the `RLock`
+Design reasoning & gotchas: [2026-07-09](../whiteboard/2026-07-09.md) — the `RLock`
 integrity-vs-accuracy model, the non-reentrant-mutex deadlock, the evict-before-add
 off-by-one.

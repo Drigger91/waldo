@@ -6,8 +6,9 @@ resume, read this file, then the current milestone's plan.**
 
 How this differs from the other docs:
 - **`/README.md`** — *why* + high-level roadmap (rarely changes).
-- **`plans/`** — *what & how*, with live status (this dir).
-- **`whiteboard/YYYY-MM-DD.md`** — dated log of decisions & gotchas (append-only history).
+- **`docs/plans/`** — *what & how*, with live status (this dir).
+- **`docs/whiteboard/YYYY-MM-DD.md`** — dated log of decisions & gotchas (append-only
+  history).
 
 ## Direction
 
