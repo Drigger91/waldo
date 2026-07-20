@@ -66,6 +66,77 @@ func TestStore_EvictByCount(t *testing.T) {
 	}
 }
 
+// --- versioning ------------------------------------------------------------
+
+func TestStore_Versioning(t *testing.T) {
+	s := waldo.New[string, int](waldo.Options[string, int]{MaxVersions: 3})
+
+	s.Set("k", 1)
+	s.Set("k", 2)
+	s.Set("k", 3)
+
+	if v, ok := s.Get("k"); !ok || v != 3 {
+		t.Fatalf("Get(k) = %v, %v; want 3, true (latest)", v, ok)
+	}
+	if s.Len() != 1 {
+		t.Fatalf("Len() = %d; want 1 (one key, three versions)", s.Len())
+	}
+
+	h := s.History("k")
+	if len(h) != 3 {
+		t.Fatalf("len(History) = %d; want 3", len(h))
+	}
+	if h[0].Value != 3 || h[1].Value != 2 || h[2].Value != 1 {
+		t.Errorf("History values = %d,%d,%d; want 3,2,1 (newest-first)", h[0].Value, h[1].Value, h[2].Value)
+	}
+	if !(h[0].Seq > h[1].Seq && h[1].Seq > h[2].Seq) {
+		t.Errorf("History seqs = %d,%d,%d; want strictly descending (newest-first)", h[0].Seq, h[1].Seq, h[2].Seq)
+	}
+
+	// A 4th write drops the oldest (value 1).
+	s.Set("k", 4)
+	h = s.History("k")
+	if len(h) != 3 {
+		t.Fatalf("after 4th Set: len(History) = %d; want 3 (bounded)", len(h))
+	}
+	if h[0].Value != 4 || h[2].Value != 2 {
+		t.Errorf("after 4th Set: newest=%d oldest=%d; want 4 and 2", h[0].Value, h[2].Value)
+	}
+
+	// MaxVersions: 1 is the plain latest-only cache — no history kept.
+	one := waldo.New[string, int](waldo.Options[string, int]{MaxVersions: 1})
+	one.Set("x", 10)
+	one.Set("x", 20)
+	oh := one.History("x")
+	if len(oh) != 1 {
+		t.Fatalf("MaxVersions=1: len(History) = %d; want 1 (latest only)", len(oh))
+	}
+	if oh[0].Value != 20 {
+		t.Errorf("MaxVersions=1: newest = %d; want 20", oh[0].Value)
+	}
+
+	// An unset MaxVersions falls back to DefaultMaxVersions (5), not to 1:
+	// waldo is a versioned store by default. There is deliberately no upper
+	// clamp — a fixed ceiling is exactly what MVCC (04) would have to remove.
+	d := waldo.New[string, int](waldo.Options[string, int]{})
+	for i := 1; i <= 7; i++ {
+		d.Set("x", i)
+	}
+	dh := d.History("x")
+	if len(dh) != waldo.DefaultMaxVersions {
+		t.Fatalf("default MaxVersions: len(History) = %d; want %d", len(dh), waldo.DefaultMaxVersions)
+	}
+	if dh[0].Value != 7 || dh[len(dh)-1].Value != 3 {
+		t.Errorf("default MaxVersions: newest=%d oldest=%d; want 7 and 3", dh[0].Value, dh[len(dh)-1].Value)
+	}
+
+	// Delete drops the whole chain.
+	s.Delete("k")
+	if h := s.History("k"); h != nil {
+		t.Errorf("History after Delete = %v; want nil", h)
+	}
+}
+
 // --- concurrency (run with -race) -----------------------------------------
 
 // TestStore_ConcurrentAccess is the one that justifies the whole Phase 1 design.
