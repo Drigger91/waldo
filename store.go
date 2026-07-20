@@ -1,7 +1,9 @@
 package waldo
 
 import (
+	"slices"
 	"sync"
+	"time"
 
 	"github.com/Drigger91/waldo/eviction"
 )
@@ -65,7 +67,7 @@ func (s *store[K, V]) Set(key K, value V) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.pushVersion(key, value) {
+	if s.pushVersionLocked(key, value) {
 		// brand-new key: register with the policy, then trim to the entry budget.
 		s.policy.Add(key)
 		s.evict()
@@ -75,21 +77,36 @@ func (s *store[K, V]) Set(key K, value V) {
 	}
 }
 
-// pushVersion appends value as a new version of key, trimming the chain to
+// pushVersionLocked appends value as a new version of key, trimming the chain to
 // maxVersions by dropping the oldest. Reports whether key was newly created.
-// Caller MUST hold s.mu.
 //
-// TODO(you):
-//  1. Bump s.seq and build Version[V]{Seq: s.seq, Value: value, Ts: <unix nanos>}.
-//     (Add the "time" import; time.Now().UnixNano() for Ts.)
-//  2. e := s.items[key]; append the version to e.versions.
-//  3. If len(e.versions) > s.maxVersions, drop the OLDEST (front element) so the
-//     chain stays bounded. Mind backing-array aliasing: a bare e.versions[1:]
-//     keeps referencing the dropped element — shift left or copy into a fresh
-//     slice instead.
-//  4. Write e back into s.items and return whether it was a new key.
-func (s *store[K, V]) pushVersion(key K, value V) (isNew bool) {
-	panic("TODO: implement pushVersion")
+// The "Locked" suffix is the convention for helpers that assume s.mu is already
+// held. The compiler cannot enforce it and RWMutex is not reentrant, so the name
+// is the only warning the call site gets.
+func (s *store[K, V]) pushVersionLocked(key K, value V) (isNew bool) {
+	s.seq++
+
+	currTime := time.Now().UnixNano()
+
+	versionEntry := Version[V]{
+		Value: value,
+		Ts:    currTime,
+		Seq:   s.seq,
+	}
+
+	// Map values are COPIES — vals is a local, not a reference into the map.
+	// Nothing here sticks until the write-back at the end.
+	vals, exists := s.items[key]
+	vals.versions = append(vals.versions, versionEntry)
+
+	for len(vals.versions) > s.maxVersions {
+		n := copy(vals.versions, vals.versions[1:]) // shift everything down one
+		clear(vals.versions[n:])                    // drop the duplicated tail ref
+		vals.versions = vals.versions[:n]
+	}
+
+	s.items[key] = vals
+	return exists == false // need to pass whether the key was new/old
 }
 
 // Delete removes key and all its versions if present.
@@ -121,11 +138,15 @@ func (s *store[K, V]) History(key K) []Version[V] {
 	}
 	s.policy.Touch(key)
 
-	// TODO(you): return a newest-first COPY of e.versions. Two reasons to copy:
-	//   - internal order is oldest-first; callers want newest-first;
-	//   - never hand out the internal slice — a caller could mutate our state.
-	_ = e // remove once you use e.versions
-	panic("TODO: finish History")
+	// FIX(3): `versions := e.versions` copies the slice HEADER, not the elements —
+	// so slices.Reverse was reordering the store's own chain in place. Because
+	// latest() reads the last element, one History call left Get returning the
+	// OLDEST value, and a second History call undid the first. Clone, then
+	// reverse the clone: the caller gets newest-first and can never touch our
+	// state.
+	out := slices.Clone(e.versions)
+	slices.Reverse(out)
+	return out
 }
 
 // evict removes victims until the entry-count budget is satisfied.
